@@ -11,9 +11,13 @@ def handle_commands():
     def handle_command(message):
         handler.handle_start(bot, message)
 
+    @bot.message_handler(commands=['find'])
+    def handle_command(message):
+        handler.handle_find(bot, message)
+
     @bot.message_handler(content_types=['text'])
     def handle_command(message):
-        print(message)
+        handler.handle_message(bot, message)
 
 
 def main():
