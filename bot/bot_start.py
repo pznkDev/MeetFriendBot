@@ -24,6 +24,10 @@ def handle_commands():
     def handle_command(message):
         handler.handle_message(bot, message)
 
+    @bot.message_handler(content_types=['location'])
+    def handle_command(message):
+        handler.handle_location(bot, message)
+
 
 def main():
     handle_commands()
