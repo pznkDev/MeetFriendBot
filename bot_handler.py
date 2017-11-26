@@ -64,8 +64,9 @@ def validate_sex(bot, message, new_status):
 
 
 def validate_location(bot, message, new_status):
-    if message.text != '':
-        history[message.chat.id]['location'] = message.text
+    if message.location != '':
+        print(message.location)
+        history[message.chat.id]['location'] = message.location
         history[message.chat.id]['state'] = new_status
         return True
     else:
@@ -92,26 +93,11 @@ def handle_message(bot, msg):
     elif state == bot_msg.STATE_FIND_INPUT_SEX and validate_sex(bot, msg, bot_msg.STATE_FIND_INPUT_LOCATION):
         send_msg_input_location(bot, msg)
 
-    elif state == bot_msg.STATE_FIND_INPUT_LOCATION and validate_location(bot, msg, bot_msg.STATE_INIT):
-        send_msg_find_start(bot, msg)
-        # TODO "Find" request
-        user = history[msg.chat.id]
-        print('REQUEST: Age=%s, Sex=%s, Location=%s' %
-              (
-                  user.get('age', ''),
-                  user.get('sex', ''),
-                  user.get('location', '')
-              )
-              )
-
     elif state == bot_msg.STATE_LOGIN_INPUT_AGE and validate_age(bot, msg, bot_msg.STATE_LOGIN_INPUT_SEX):
         send_msg_input_sex(bot, msg)
 
     elif state == bot_msg.STATE_LOGIN_INPUT_SEX and validate_sex(bot, msg, bot_msg.STATE_LOGIN_INPUT_LOCATION):
         send_msg_input_location(bot, msg)
-
-    elif state == bot_msg.STATE_LOGIN_INPUT_LOCATION and validate_location(bot, msg, bot_msg.STATE_LOGIN_INPUT_TIME):
-        send_msg_input_time(bot, msg)
 
     elif state == bot_msg.STATE_LOGIN_INPUT_TIME and validate_time(bot, msg, bot_msg.STATE_INIT):
         send_msg_login_start(bot, msg)
@@ -128,6 +114,27 @@ def handle_message(bot, msg):
               )
     else:
         pass
+
+
+def handle_location(bot, msg):
+    # TODO: get state from database
+    state = history[msg.chat.id]['state'] if msg.chat.id in history else ''
+    print('Current_state:', state)
+
+    if state == bot_msg.STATE_FIND_INPUT_LOCATION and validate_location(bot, msg, bot_msg.STATE_INIT):
+        send_msg_find_start(bot, msg)
+        # TODO "Find" request
+        user = history[msg.chat.id]
+        print('REQUEST: Age=%s, Sex=%s, Location=%s' %
+              (
+                  user.get('age', ''),
+                  user.get('sex', ''),
+                  user.get('location', '')
+              )
+              )
+
+    elif state == bot_msg.STATE_LOGIN_INPUT_LOCATION and validate_location(bot, msg, bot_msg.STATE_LOGIN_INPUT_TIME):
+        send_msg_input_time(bot, msg)
 
 
 def send_msg_input_age(bot, message):
