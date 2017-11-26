@@ -1,11 +1,15 @@
 aiohttp==2.3.3
 aiopg==0.13.1
 async-timeout==2.0.0
+certifi==2017.4.17
 chardet==3.0.4
 envparse==0.2.0
+idna==2.5
 multidict==3.3.2
 psycopg2==2.7.3.2
+pyTelegramBotAPI==3.0.1
 requests==2.7.0
+six==1.10.0
 SQLAlchemy==1.1.15
-telebot==0.0.3
+urllib3==1.21.1
 yarl==0.15.0
