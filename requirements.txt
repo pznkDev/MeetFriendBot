@@ -1,0 +1,11 @@
+aiohttp==2.3.3
+aiopg==0.13.1
+async-timeout==2.0.0
+chardet==3.0.4
+envparse==0.2.0
+multidict==3.3.2
+psycopg2==2.7.3.2
+requests==2.7.0
+SQLAlchemy==1.1.15
+telebot==0.0.3
+yarl==0.15.0

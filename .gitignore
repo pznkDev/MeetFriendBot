@@ -1,0 +1,11 @@
+# env
+.env
+
+# Python
+*.pyc
+*.pyo
+
+# PyCharm
+.idea
+
+*.log

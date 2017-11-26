@@ -1,6 +1,6 @@
 import telebot
 
-import bot_messages as bot_msg
+from bot import bot_messages as bot_msg
 
 # mock database for a time
 history = {}
