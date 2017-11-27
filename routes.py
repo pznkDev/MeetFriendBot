@@ -1,4 +1,4 @@
-from bot_backend.endpoints import main
+from views import main
 
 
 def setup_routes(app):

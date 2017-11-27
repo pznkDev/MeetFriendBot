@@ -17,3 +17,6 @@ To run project locally:
 
 6) Run server: <br />
     (<your_env>)$ python run.py
+
+7) Run bot: <br />
+    (<your_env>)$ python bot/run.py
