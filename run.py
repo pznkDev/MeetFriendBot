@@ -10,8 +10,8 @@ from settings import get_config
 
 
 async def init_app(app):
-    await app.on_startup.append(init_pg)
-    await app.on_startup.append(init_task)
+    app.on_startup.append(init_pg)
+    app.on_startup.append(init_task)
 
 
 async def destroy_app(app):
