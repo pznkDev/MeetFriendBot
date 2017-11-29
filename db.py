@@ -1,5 +1,6 @@
 import aiopg.sa
 
+
 async def init_pg(app):
     conf = app['config']
     engine = await aiopg.sa.create_engine(
