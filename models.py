@@ -54,3 +54,5 @@ user_find = sa.Table(
 
     sa.PrimaryKeyConstraint('id', name='user_find_id_pkey'),
 )
+
+# TODO: drop table if exist create table etc, generate test data
