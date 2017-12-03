@@ -1,5 +1,5 @@
 import aiopg.sa
-from models import user_find
+from models import user_find, Sex
 
 
 class RecordNotFound(Exception):
@@ -19,6 +19,7 @@ async def init_pg(app):
         loop=app.loop
     )
     app['db'] = engine
+    # await init_db(engine)
 
 
 async def close_pg(app):
@@ -30,17 +31,27 @@ async def create_tables(conn):
     for table_name in ['user_login', 'user_find']:
         await conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
 
-    # TODO: sex to ENUM, location to JSON
+    await conn.execute('DROP TYPE IF EXISTS sex;')
+
+    await conn.execute('''
+            CREATE TYPE sex AS ENUM (
+                'male',
+                'female'
+            );
+            ALTER TYPE sex OWNER TO meet_user;
+    ''')
+
     await conn.execute('''
             CREATE TABLE user_login (
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
                username varchar(50) UNIQUE,
                age varchar(50),
-               sex   ENUM,
-               location varchar(255),
+               sex sex DEFAULT 'male'::sex,
+               location json,
                time int 
-            )
+            );
+            ALTER TABLE user_login OWNER TO meet_user;
     ''')
 
     await conn.execute('''
@@ -48,9 +59,10 @@ async def create_tables(conn):
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
                age varchar(50),
-               sex varchar(255),
-               location varchar(255)
-            )
+               sex sex DEFAULT 'male'::sex,
+               location json
+            );
+            ALTER TABLE user_find OWNER TO meet_user;
     ''')
 
 
@@ -59,9 +71,13 @@ async def init_db(engine):
         async with engine.acquire() as conn:
             await create_tables(conn)
 
-        # TODO: test data
-        # async with engine.acquire() as conn:
-        #     await conn.execute(table.insert().values(val=''))
+        async with engine.acquire() as conn:
+            await conn.execute(user_find.insert().values(
+                chat_id=1,
+                age=18,
+                sex=Sex.male,
+                location={'lat': 50.5, 'lng': 30.4}
+            ))
 
 
 async def get_all_users(conn):

@@ -11,4 +11,4 @@ async def get_all_users(request):
             raise web.HTTPNotFound(text=str(e))
 
         users = [dict(u) for u in user_records]
-        return web.json_response({'users': users})
+        return web.json_response({'users': str(users)})
