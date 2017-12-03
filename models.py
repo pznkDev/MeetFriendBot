@@ -28,30 +28,32 @@ class Sex(enum.Enum):
     female = 2
 
 
-user_login = sa.Table(
-    'user_login', meta,
+states = sa.Table(
+    'states', meta,
 
     sa.Column('id', sa.Integer),
     sa.Column('chat_id', sa.Integer, unique=True, nullable=False),
-    sa.Column('username', sa.String(50), unique=True),
-    sa.Column('age', sa.String(50)),
+    sa.Column('state', sa.String(50)),
+    sa.Column('age', sa.Integer),
     sa.Column('sex', sa.Enum(Sex)),
     sa.Column('location', sa.JSON),
     sa.Column('time', sa.Integer),
 
-    sa.PrimaryKeyConstraint('id', name='user_login_id_pkey'),
+    sa.PrimaryKeyConstraint('id', name='states_id_pkey'),
 )
 
 
-user_find = sa.Table(
-    'user_find', meta,
+users = sa.Table(
+    'users', meta,
 
     sa.Column('id', sa.Integer),
     sa.Column('chat_id', sa.Integer, unique=True, nullable=False),
-    sa.Column('age', sa.String(50)),
+    sa.Column('username', sa.String(50)),
+    sa.Column('age', sa.Integer),
     sa.Column('sex', sa.Enum(Sex)),
     sa.Column('location', sa.JSON),
+    sa.Column('expires_at', sa.DateTime),
 
-    sa.PrimaryKeyConstraint('id', name='user_find_id_pkey'),
+    sa.PrimaryKeyConstraint('id', name='users_id_pkey'),
 )
 

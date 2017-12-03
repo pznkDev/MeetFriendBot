@@ -1,5 +1,5 @@
 import aiopg.sa
-from models import user_find, Sex
+from models import users, Sex
 
 
 class RecordNotFound(Exception):
@@ -27,8 +27,8 @@ async def close_pg(app):
     await app['db'].wait_closed()
 
 
-async def create_tables(conn):
-    for table_name in ['user_login', 'user_find']:
+async def create_tables(conn, config):
+    for table_name in ['states', 'users']:
         await conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
 
     await conn.execute('DROP TYPE IF EXISTS sex;')
@@ -42,38 +42,41 @@ async def create_tables(conn):
     ''')
 
     await conn.execute('''
-            CREATE TABLE user_login (
+            CREATE TABLE states (
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
-               username varchar(50) UNIQUE,
-               age varchar(50),
+               state varchar(50),
+               age int NOT NULL,
                sex sex DEFAULT 'male'::sex,
                location json,
-               time int 
+               time int NOT NULL
             );
-            ALTER TABLE user_login OWNER TO meet_user;
-    ''')
+            ALTER TABLE states OWNER TO {};
+    '''.format(config['DB_USER']))
 
     await conn.execute('''
-            CREATE TABLE user_find (
+            CREATE TABLE users (
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
-               age varchar(50),
+               username varchar(50) UNIQUE NOT NULL,
+               age varchar(50) NOT NULL,
                sex sex DEFAULT 'male'::sex,
-               location json
+               location json,
+               expires_at TIMESTAMP DEFAULT now()
             );
-            ALTER TABLE user_find OWNER TO meet_user;
-    ''')
+            ALTER TABLE users OWNER TO {};
+    '''.format(config['DB_USER']))
 
 
-async def init_db(engine):
+async def init_db(engine, config):
     async with engine:
         async with engine.acquire() as conn:
-            await create_tables(conn)
+            await create_tables(conn, config)
 
         async with engine.acquire() as conn:
-            await conn.execute(user_find.insert().values(
+            await conn.execute(users.insert().values(
                 chat_id=1,
+                username='@lol',
                 age=18,
                 sex=Sex.male,
                 location={'lat': 50.5, 'lng': 30.4}
@@ -82,7 +85,7 @@ async def init_db(engine):
 
 async def get_all_users(conn):
     rows = await conn.execute(
-        user_find.select()
+        users.select()
     )
     user_records = await rows.fetchall()
     if not user_records:

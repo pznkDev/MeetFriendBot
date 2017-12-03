@@ -14,5 +14,4 @@ async def close_task(app):
 async def cleaner(app):
     while True:
         # TODO get all users, cleaning function
-        print('awda')
         await sleep(TWO_MINUTES)
