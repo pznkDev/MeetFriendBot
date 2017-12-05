@@ -19,7 +19,7 @@ async def init_pg(app):
         loop=app.loop
     )
     app['db'] = engine
-    # await init_db(engine)
+    # await init_db(engine, conf)
 
 
 async def close_pg(app):
@@ -38,7 +38,7 @@ async def create_tables(conn, config):
                 'male',
                 'female'
             );
-            ALTER TYPE sex OWNER TO meet_user;
+            ALTER TYPE sex OWNER TO ADMIN;
     ''')
 
     await conn.execute('''
@@ -92,3 +92,30 @@ async def get_all_users(conn):
         msg = "There is no user_find records"
         raise RecordNotFound(msg)
     return user_records
+
+
+async def get_users_with_params(conn, params):
+    # TODO: modify query
+    rows = await conn.execute(
+        users.select()
+    )
+    user_records = await rows.fetchall()
+    if not user_records:
+        msg = "There is no user_find records"
+        raise RecordNotFound(msg)
+    return user_records
+
+
+def add_user(conn, user):
+    # TODO: add function - insert in db
+    return None
+
+
+def get_state_by_chat_id(conn, chat_id):
+    # TODO: add function - select from db where chat_id=param
+    return None
+
+
+def update_state_by_chat_id(conn, chat_id, params):
+    # TODO: update state with params by chat_id
+    return None
