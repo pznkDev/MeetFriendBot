@@ -1,5 +1,7 @@
 import aiopg.sa
-from models import users, Sex
+
+import datetime
+from models import users, states, Sex, State
 
 
 class RecordNotFound(Exception):
@@ -38,18 +40,18 @@ async def create_tables(conn, config):
                 'male',
                 'female'
             );
-            ALTER TYPE sex OWNER TO ADMIN;
-    ''')
+            ALTER TYPE sex OWNER TO {};
+    '''.format(config['DB_USER']))
 
     await conn.execute('''
             CREATE TABLE states (
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
                state varchar(50),
-               age int NOT NULL,
+               age int,
                sex sex DEFAULT 'male'::sex,
                location json,
-               time int NOT NULL
+               time int
             );
             ALTER TABLE states OWNER TO {};
     '''.format(config['DB_USER']))
@@ -106,14 +108,25 @@ async def get_users_with_params(conn, params):
     return user_records
 
 
-def add_user(conn, user):
-    # TODO: add function - insert in db
-    return None
+async def insert_user(conn, user):
+    user["expires_at"] = datetime.datetime.now() + datetime.timedelta(minutes=int(user["expires_at"]))
+    await conn.execute(
+        users.insert().values(user)
+    )
 
 
-def get_state_by_chat_id(conn, chat_id):
-    # TODO: add function - select from db where chat_id=param
-    return None
+async def get_state_by_chat_id(conn, chat_id):
+    row = await conn.execute(
+        states.select().where(states.c.chat_id == chat_id)
+    )
+    state_record = await row.fetchone()
+    return state_record
+
+
+async def insert_state(conn, chat_id):
+    await conn.execute(
+        states.insert().values(chat_id=chat_id, state=State.STATE_INIT.value)
+    )
 
 
 def update_state_by_chat_id(conn, chat_id, params):
