@@ -117,7 +117,7 @@ async def insert_user(conn, user):
 
 async def get_state_by_chat_id(conn, chat_id):
     row = await conn.execute(
-        states.select().where(states.c.chat_id == chat_id)
+        states.select().where(states.c.chat_id == int(chat_id))
     )
     state_record = await row.fetchone()
     return state_record

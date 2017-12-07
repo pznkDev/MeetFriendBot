@@ -1,3 +1,6 @@
+import json
+
+import requests
 import telebot
 
 from bot import utils as bot_msg
@@ -29,11 +32,10 @@ def handle_commands(bot):
 
 
 def get_cur_state(chat_id):
-    """ Returns current user's state from db by chat_id """
-    # TODO insert request to server
-    state = history[chat_id]['state'] if chat_id in history else ''
-    print('Current_state:', state)
-    return state
+    """ Returns current user's state from table 'states' by chat_id """
+    response = requests.get('http://127.0.0.1:8080/states/%s/' % str(chat_id))
+    response_data = json.loads(response.text)
+    return response_data.get('state')
 
 
 def set_cur_state(chat_id, new_state):
