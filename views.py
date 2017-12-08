@@ -1,7 +1,9 @@
-import db
+import json
 
 from aiohttp import web
+from geopy.distance import vincenty
 
+import db
 from models import State
 
 
@@ -24,23 +26,46 @@ async def add_user(request):
 
 
 async def find_users(request):
-    # TODO: add validation
     params = {
-        'age': 12,
-        'sex': 1,
-        'location': ''
+        'age': request.query.get('age'),
+        'sex': request.query.get('sex'),
+        'loc': json.loads(request.query.get('location'))
     }
 
+    users, users_result = [], []
     async with request.app['db'].acquire() as conn:
         try:
-            user_records = await db.get_users_with_params(conn, params)
+            users = await db.get_users_with_params(conn, params)
         except db.RecordNotFound as e:
             raise web.HTTPNotFound(text=str(e))
 
-        users = [dict(u) for u in user_records]
+        users = [dict(u) for u in users]
 
-    # TODO: add realization of distance-min
-    return web.json_response({'users': []})
+    # find 3 users with minimum distance to request location
+    if len(users) > 3:
+        cur_loc = (float(params['loc']['latitude']), float(params['loc']['longitude']))
+        min_distance_index_dict = {}
+        cur_max = float('inf')
+
+        for user in users:
+            user_loc = (float(user['location']['latitude']), float(user['location']['longitude']))
+            cur_dist = vincenty(cur_loc, user_loc).km
+
+            if len(min_distance_index_dict.keys()) < 3:
+                min_distance_index_dict[cur_dist] = user['id']
+                if cur_max < cur_dist or cur_max == float('inf'):
+                    cur_max = cur_dist
+            else:
+                if cur_max > cur_dist:
+                    min_distance_index_dict.pop(cur_max, None)
+                    min_distance_index_dict[cur_dist] = user['id']
+                    cur_max = max([key for key in min_distance_index_dict])
+
+        users_result = [user for user in users if user['id'] in min_distance_index_dict.values()]
+        return web.json_response({'users': str(users_result)})
+
+    else:
+        return web.json_response({'users': str(users)})
 
 
 async def get_state(request):

@@ -1,6 +1,8 @@
-import aiopg.sa
-
 import datetime
+
+import aiopg.sa as sa
+from sqlalchemy import and_
+
 from models import users, states, Sex, State
 
 
@@ -10,7 +12,7 @@ class RecordNotFound(Exception):
 
 async def init_pg(app):
     conf = app['config']
-    engine = await aiopg.sa.create_engine(
+    engine = await sa.create_engine(
         database=conf['DB_NAME'],
         user=conf['DB_USER'],
         password=conf['DB_PASSWORD'],
@@ -97,15 +99,16 @@ async def get_all_users(conn):
 
 
 async def get_users_with_params(conn, params):
-    # TODO: modify query
     rows = await conn.execute(
         users.select()
+             .where(
+                and_(
+                    users.c.age == params['age'],
+                    users.c.sex == params['sex']
+                )
+        )
     )
-    user_records = await rows.fetchall()
-    if not user_records:
-        msg = "There is no user_find records"
-        raise RecordNotFound(msg)
-    return user_records
+    return await rows.fetchall()
 
 
 async def insert_user(conn, user):
@@ -119,8 +122,7 @@ async def get_state_by_chat_id(conn, chat_id):
     row = await conn.execute(
         states.select().where(states.c.chat_id == int(chat_id))
     )
-    state_record = await row.fetchone()
-    return state_record
+    return await row.fetchone()
 
 
 async def insert_state(conn, chat_id):

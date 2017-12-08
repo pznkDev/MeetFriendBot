@@ -1,3 +1,4 @@
+geopy
 aiohttp==2.3.3
 aiopg==0.13.1
 async-timeout==2.0.0

@@ -34,8 +34,7 @@ def handle_commands(bot):
 def get_cur_state(chat_id):
     """ Returns current user's state from table 'states' by chat_id """
     response = requests.get('http://127.0.0.1:8080/states/%s/' % str(chat_id))
-    response_data = json.loads(response.text)
-    return response_data.get('state')
+    return json.loads(response.text)
 
 
 def set_cur_state(chat_id, new_state):
@@ -79,7 +78,8 @@ def handle_login(bot, message):
 
 def handle_message(bot, msg):
     """ Realization of finite-state machine of user_journey with simple text=messages"""
-    state = get_cur_state(msg.chat.id)
+    form = get_cur_state(msg.chat.id)
+    state = form.get('state')
 
     if state == bot_msg.STATE_FIND_INPUT_AGE and update_age(bot, msg, bot_msg.STATE_FIND_INPUT_SEX):
         send_msg_input_sex(bot, msg)
@@ -111,7 +111,8 @@ def handle_message(bot, msg):
 
 def handle_location(bot, msg):
     """ Additional handler, as addition for finite-state machine, as support of location attachments. """
-    state = get_cur_state(msg.chat.id)
+    form = get_cur_state(msg.chat.id)
+    state = form.get('state')
 
     if state == bot_msg.STATE_FIND_INPUT_LOCATION and update_location(bot, msg, bot_msg.STATE_INIT):
         send_msg_find_start(bot, msg)
