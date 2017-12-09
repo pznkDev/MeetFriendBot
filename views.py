@@ -1,4 +1,4 @@
-import json
+from ast import literal_eval
 
 from aiohttp import web
 from geopy.distance import vincenty
@@ -28,7 +28,7 @@ async def find_users(request):
     params = {
         'age': request.query.get('age'),
         'sex': request.query.get('sex'),
-        'loc': json.loads(request.query.get('location'))
+        'loc': literal_eval(request.query.get('location'))
     }
 
     users, users_result = [], []
@@ -61,10 +61,10 @@ async def find_users(request):
                     cur_max = max([key for key in min_distance_index_dict])
 
         users_result = [user for user in users if user['id'] in min_distance_index_dict.values()]
-        return web.json_response({'users': str(users_result)})
+        return web.json_response({'users': str([user['username'] for user in users_result])})
 
     else:
-        return web.json_response({'users': str(users)})
+        return web.json_response({'users': str([user['username'] for user in users])})
 
 
 async def get_state(request):
@@ -96,7 +96,7 @@ async def update_state(request):
 
     async with request.app['db'].acquire() as conn:
         try:
-            res = await db.update_state_by_chat_id(conn, state)
+            await db.update_state_by_chat_id(conn, state)
             return web.json_response({'message': 'success'})
         except db.RecordNotFound as e:
             raise web.HTTPNotFound(text=str(e))

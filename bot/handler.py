@@ -4,7 +4,7 @@ import json
 import requests
 import telebot
 
-from bot import utils as bot_msg
+from bot import utils as const
 
 URL = 'http://127.0.0.1:8080/'
 
@@ -46,7 +46,7 @@ def handle_start(bot, message):
     """ Handles command /start"""
     markup_start = telebot.types.ReplyKeyboardMarkup(True, True)
     markup_start.row('/login', '/find')
-    bot.send_message(message.chat.id, bot_msg.MSG_START, parse_mode='Markdown', reply_markup=markup_start)
+    bot.send_message(message.chat.id, const.MSG_START, parse_mode='Markdown', reply_markup=markup_start)
 
 
 def handle_find(bot, message):
@@ -58,13 +58,13 @@ def handle_find(bot, message):
     """
     state = {
         'chat_id': message.chat.id,
-        'state': bot_msg.STATE_FIND_INPUT_AGE,
+        'state': const.STATE_FIND_INPUT_AGE,
         'age': None,
         'location': None,
         'time': None
     }
     update_cur_form(state)
-    send_msg(bot, message.chat.id, bot_msg.MSG_FIND_INPUT_START)
+    send_msg(bot, message.chat.id, const.MSG_FIND_INPUT_START)
     send_msg_input_age(bot, message)
 
 
@@ -72,7 +72,7 @@ def handle_login(bot, message):
     """ Handles command /login. Login is used to become visible for other people. """
     state = {
         'chat_id': message.chat.id,
-        'state': bot_msg.STATE_LOGIN_INPUT_AGE,
+        'state': const.STATE_LOGIN_INPUT_AGE,
         'age': None,
         'location': None,
         'time': None
@@ -86,31 +86,31 @@ def handle_message(bot, msg):
     form = get_cur_state(msg.chat.id)
     state = form.get('state')
 
-    if state in (bot_msg.STATE_FIND_INPUT_AGE, bot_msg.STATE_LOGIN_INPUT_AGE) and valid_age(bot, msg):
+    if state in (const.STATE_FIND_INPUT_AGE, const.STATE_LOGIN_INPUT_AGE) and valid_age(bot, msg):
         form.update(
             {
                 'age': msg.text,
-                'state': bot_msg.STATE_FIND_INPUT_SEX if state == bot_msg.STATE_FIND_INPUT_AGE else bot_msg.STATE_LOGIN_INPUT_SEX
+                'state': const.STATE_FIND_INPUT_SEX if state == const.STATE_FIND_INPUT_AGE else const.STATE_LOGIN_INPUT_SEX
             }
         )
         update_cur_form(form)
         send_msg_input_sex(bot, msg)
 
-    elif state in (bot_msg.STATE_FIND_INPUT_SEX, bot_msg.STATE_LOGIN_INPUT_SEX) and valid_sex(bot, msg):
+    elif state in (const.STATE_FIND_INPUT_SEX, const.STATE_LOGIN_INPUT_SEX) and valid_sex(bot, msg):
         form.update(
             {
                 'sex': msg.text,
-                'state': bot_msg.STATE_FIND_INPUT_LOCATION if state == bot_msg.STATE_FIND_INPUT_SEX else bot_msg.STATE_LOGIN_INPUT_LOCATION
+                'state': const.STATE_FIND_INPUT_LOCATION if state == const.STATE_FIND_INPUT_SEX else const.STATE_LOGIN_INPUT_LOCATION
             }
         )
         update_cur_form(form)
         send_msg_input_location(bot, msg)
 
-    elif state == bot_msg.STATE_LOGIN_INPUT_TIME and valid_time(bot, msg):
+    elif state == const.STATE_LOGIN_INPUT_TIME and valid_time(bot, msg):
         form.update(
             {
                 'expires_at': msg.text,
-                'state': bot_msg.STATE_INIT,
+                'state': const.STATE_INIT,
                 'username': '@slava_ko'
             }
         )
@@ -127,20 +127,26 @@ def handle_location(bot, msg):
     form = get_cur_state(msg.chat.id)
     state = form.get('state')
 
-    if state in (bot_msg.STATE_FIND_INPUT_LOCATION, bot_msg.STATE_LOGIN_INPUT_LOCATION) and valid_location(bot, msg):
+    if state in (const.STATE_FIND_INPUT_LOCATION, const.STATE_LOGIN_INPUT_LOCATION) and valid_location(bot, msg):
         form.update(
             {
                 'location': str(msg.location),
-                'state': bot_msg.STATE_INIT if state == bot_msg.STATE_FIND_INPUT_LOCATION else bot_msg.STATE_LOGIN_INPUT_TIME
+                'state': const.STATE_INIT if state == const.STATE_FIND_INPUT_LOCATION else const.STATE_LOGIN_INPUT_TIME
             }
         )
         update_cur_form(form)
 
-        if state == bot_msg.STATE_FIND_INPUT_LOCATION:
+        if state == const.STATE_FIND_INPUT_LOCATION:
             send_msg_find_start(bot, msg)
 
-            # TODO "Find" request
-            print("REQUEST:::", form)
+            response = requests.get(URL + ('users/find?age=%s&sex=%s&location=%s' %
+                                           (
+                                               form.get('age'),
+                                               form.get('sex'),
+                                               str(form.get('location'))
+                                           ))
+                                    )
+            send_msg_find_result(bot, msg.chat.id, literal_eval(json.loads(response.text).get('users')))
         else:
             send_msg_input_time(bot, msg)
 
@@ -157,58 +163,68 @@ def valid_age(bot, message):
         else:
             send_msg(bot, message.chat.id, 'Wrong input')
     except ValueError:
-        send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_AGE)
+        send_msg(bot, message.chat.id, const.MSG_ERROR_AGE)
 
 
 def valid_sex(bot, message):
     if message.text in ('male', 'female'):
         return True
     else:
-        send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_SEX)
+        send_msg(bot, message.chat.id, const.MSG_ERROR_SEX)
 
 
 def valid_location(bot, message):
     if message.location != '':
         return True
     else:
-        send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_LOCATION)
+        send_msg(bot, message.chat.id, const.MSG_ERROR_LOCATION)
 
 
 def valid_time(bot, message):
     if message.text in ('15', '30', '60', '90'):
         return True
     else:
-        send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_TIME)
+        send_msg(bot, message.chat.id, const.MSG_ERROR_TIME)
 
 
 def send_msg_input_age(bot, message):
-    bot.send_message(message.chat.id, bot_msg.MSG_INPUT_AGE, parse_mode='Markdown')
+    bot.send_message(message.chat.id, const.MSG_INPUT_AGE, parse_mode='Markdown')
 
 
 def send_msg_input_sex(bot, message):
     markup_start = telebot.types.ReplyKeyboardMarkup(True, True)
     markup_start.row('male', 'female')
-    bot.send_message(message.chat.id, bot_msg.MSG_INPUT_SEX, parse_mode='Markdown', reply_markup=markup_start)
+    bot.send_message(message.chat.id, const.MSG_INPUT_SEX, parse_mode='Markdown', reply_markup=markup_start)
 
 
 def send_msg_input_location(bot, message):
-    bot.send_message(message.chat.id, bot_msg.MSG_INPUT_LOCATION, parse_mode='Markdown')
+    bot.send_message(message.chat.id, const.MSG_INPUT_LOCATION, parse_mode='Markdown')
 
 
 def send_msg_input_time(bot, message):
     markup_start = telebot.types.ReplyKeyboardMarkup(True, True)
     markup_start.row('15', '30')
     markup_start.row('60', '90')
-    bot.send_message(message.chat.id, bot_msg.MSG_INPUT_TIME, parse_mode='Markdown', reply_markup=markup_start)
+    bot.send_message(message.chat.id, const.MSG_INPUT_TIME, parse_mode='Markdown', reply_markup=markup_start)
 
 
 def send_msg_find_start(bot, message):
-    bot.send_message(message.chat.id, bot_msg.MSG_FIND_START, parse_mode='Markdown')
+    bot.send_message(message.chat.id, const.MSG_FIND_START, parse_mode='Markdown')
 
 
 def send_msg_login_start(bot, message):
-    bot.send_message(message.chat.id, bot_msg.MSG_LOGIN_START, parse_mode='Markdown')
+    bot.send_message(message.chat.id, const.MSG_LOGIN_START, parse_mode='Markdown')
 
 
 def send_msg(bot, chat_id, msg):
     bot.send_message(chat_id, msg, parse_mode='Markdown')
+
+
+def send_msg_find_result(bot, chat_id, users):
+    if len(users) > 0:
+        message = 'Well, good luck )'
+        for i, user in enumerate(users):
+            message += '\n' + str(i) + ') ' + user
+    else:
+        message = 'No users found =( \nTry again later...'
+    bot.send_message(chat_id, message)
