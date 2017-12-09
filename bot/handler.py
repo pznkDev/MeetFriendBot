@@ -6,8 +6,7 @@ import telebot
 
 from bot import utils as bot_msg
 
-# mock database for a time
-history = {}
+URL = 'http://127.0.0.1:8080/'
 
 
 def handle_commands(bot):
@@ -34,13 +33,13 @@ def handle_commands(bot):
 
 def get_cur_state(chat_id):
     """ Returns current user's state from table 'states' by chat_id """
-    response = requests.get('http://127.0.0.1:8080/states/%s/' % str(chat_id))
+    response = requests.get(URL + 'states/%s/' % str(chat_id))
     return literal_eval(json.loads(response.text).get('state'))
 
 
 def update_cur_form(data):
     """ Updates user's form for login/find in db """
-    requests.put('http://127.0.0.1:8080/states/', data=json.dumps(data))
+    requests.put(URL + 'states/', data=json.dumps(data))
 
 
 def handle_start(bot, message):
@@ -110,21 +109,22 @@ def handle_message(bot, msg):
     elif state == bot_msg.STATE_LOGIN_INPUT_TIME and valid_time(bot, msg):
         form.update(
             {
-                'time': msg.text,
-                'state': bot_msg.STATE_INIT
+                'expires_at': msg.text,
+                'state': bot_msg.STATE_INIT,
+                'username': '@slava_ko'
             }
         )
-        update_cur_form(form)
+        form.pop('time', None)
+        form.pop('state', None)
+        form.pop('id', None)
 
+        requests.post(URL + 'users/', data=json.dumps(form))
         send_msg_login_start(bot, msg)
-
-        # TODO "LOGIN" request
 
 
 def handle_location(bot, msg):
     """ Additional handler, as addition for finite-state machine, as support of location attachments. """
     form = get_cur_state(msg.chat.id)
-    print('LOCATION STATE:', form)
     state = form.get('state')
 
     if state in (bot_msg.STATE_FIND_INPUT_LOCATION, bot_msg.STATE_LOGIN_INPUT_LOCATION) and valid_location(bot, msg):

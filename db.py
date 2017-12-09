@@ -2,6 +2,7 @@ import datetime
 
 import aiopg.sa as sa
 from sqlalchemy import and_
+from psycopg2 import IntegrityError
 
 from models import users, states
 
@@ -103,9 +104,13 @@ async def get_users_with_params(conn, params):
 
 async def insert_user(conn, user):
     user["expires_at"] = datetime.datetime.now() + datetime.timedelta(minutes=int(user["expires_at"]))
-    await conn.execute(
-        users.insert().values(user)
-    )
+    try:
+        await conn.execute(
+            users.insert().values(user)
+        )
+    except IntegrityError as e:
+        print(e)
+        pass
 
 
 async def get_state_by_chat_id(conn, chat_id):
