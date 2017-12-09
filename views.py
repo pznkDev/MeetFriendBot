@@ -4,7 +4,6 @@ from aiohttp import web
 from geopy.distance import vincenty
 
 import db
-from models import State
 
 
 async def get_users(request):
@@ -70,36 +69,34 @@ async def find_users(request):
 
 async def get_state(request):
     chat_id = request.match_info['chat_id']
+    state_record = None
 
     async with request.app['db'].acquire() as conn:
-        user_record = None
         try:
-            user_record = await db.get_state_by_chat_id(conn, chat_id)
+            state_record = await db.get_state_by_chat_id(conn, chat_id)
         except db.RecordNotFound:
             print('get_state not found')
-        if not user_record:
-            await db.insert_state(conn, chat_id)
-            return web.json_response({'state': State.STATE_INIT.value})
 
-        user = dict(user_record)
-        if user:
-            state = user.get('state')
-            return web.json_response({'state': state})
+        if state_record is None:
+            await db.insert_init_state_for_chat_id(conn, chat_id)
+            state_record = {
+                'chat_id': chat_id,
+                'state': None,
+                'age': None,
+                'location': None,
+                'time': None
+            }
+            return web.json_response({'state': str(state_record)})
         else:
-            return web.json_response({'error': 'unique chat_id error'})
+            return web.json_response({'state': str(dict(state_record))})
 
 
 async def update_state(request):
-    # TODO: add validation
-    chat_id = '12561236'
-    params = {
-        'age': 12,
-        'sex': 1,
-        'location': ''
-    }
+    state = await request.json()
 
     async with request.app['db'].acquire() as conn:
         try:
-            await db.update_state_by_chat_id(conn, chat_id, params)
+            res = await db.update_state_by_chat_id(conn, state)
+            return web.json_response({'message': 'success'})
         except db.RecordNotFound as e:
             raise web.HTTPNotFound(text=str(e))

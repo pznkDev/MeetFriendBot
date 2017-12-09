@@ -3,7 +3,7 @@ import datetime
 import aiopg.sa as sa
 from sqlalchemy import and_
 
-from models import users, states, Sex, State
+from models import users, states
 
 
 class RecordNotFound(Exception):
@@ -35,23 +35,13 @@ async def create_tables(conn, config):
     for table_name in ['states', 'users']:
         await conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
 
-    await conn.execute('DROP TYPE IF EXISTS sex;')
-
-    await conn.execute('''
-            CREATE TYPE sex AS ENUM (
-                'male',
-                'female'
-            );
-            ALTER TYPE sex OWNER TO {};
-    '''.format(config['DB_USER']))
-
     await conn.execute('''
             CREATE TABLE states (
                id serial PRIMARY KEY,
                chat_id int UNIQUE NOT NULL,
                state varchar(50),
                age int,
-               sex sex DEFAULT 'male'::sex,
+               sex varchar(6),
                location json,
                time int
             );
@@ -64,7 +54,7 @@ async def create_tables(conn, config):
                chat_id int UNIQUE NOT NULL,
                username varchar(50) UNIQUE NOT NULL,
                age varchar(50) NOT NULL,
-               sex sex DEFAULT 'male'::sex,
+               sex varchar(6),
                location json,
                expires_at TIMESTAMP DEFAULT now()
             );
@@ -82,7 +72,7 @@ async def init_db(engine, config):
                 chat_id=1,
                 username='@lol',
                 age=18,
-                sex=Sex.male,
+                sex='male',
                 location={'lat': 50.5, 'lng': 30.4}
             ))
 
@@ -125,12 +115,23 @@ async def get_state_by_chat_id(conn, chat_id):
     return await row.fetchone()
 
 
-async def insert_state(conn, chat_id):
+async def insert_init_state_for_chat_id(conn, chat_id):
     await conn.execute(
-        states.insert().values(chat_id=chat_id, state=State.STATE_INIT.value)
+        states.insert().values(chat_id=chat_id, state='state_init')
     )
 
 
-def update_state_by_chat_id(conn, chat_id, params):
-    # TODO: update state with params by chat_id
-    return None
+async def insert_state(conn, state):
+    await conn.execute(
+        states.insert().values(state)
+    )
+
+
+async def update_state_by_chat_id(conn, state):
+    res = await conn.execute(
+        states.update(states)
+              .where(states.c.chat_id == state['chat_id'])
+              .values(state)
+    )
+    if res.rowcount == 0:
+        await insert_state(conn, state)

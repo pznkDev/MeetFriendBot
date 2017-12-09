@@ -23,11 +23,6 @@ class State(enum.Enum):
         return self.name
 
 
-class Sex(enum.Enum):
-    male = 1
-    female = 2
-
-
 states = sa.Table(
     'states', meta,
 
@@ -35,7 +30,7 @@ states = sa.Table(
     sa.Column('chat_id', sa.Integer, unique=True, nullable=False),
     sa.Column('state', sa.String(50)),
     sa.Column('age', sa.Integer),
-    sa.Column('sex', sa.Enum(Sex)),
+    sa.Column('sex', sa.String(6)),
     sa.Column('location', sa.JSON),
     sa.Column('time', sa.Integer),
 
@@ -50,10 +45,9 @@ users = sa.Table(
     sa.Column('chat_id', sa.Integer, unique=True, nullable=False),
     sa.Column('username', sa.String(50)),
     sa.Column('age', sa.Integer),
-    sa.Column('sex', sa.Enum(Sex)),
+    sa.Column('sex', sa.String(6)),
     sa.Column('location', sa.JSON),
     sa.Column('expires_at', sa.DateTime),
 
     sa.PrimaryKeyConstraint('id', name='users_id_pkey'),
 )
-

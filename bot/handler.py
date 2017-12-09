@@ -1,3 +1,4 @@
+from ast import literal_eval
 import json
 
 import requests
@@ -34,21 +35,12 @@ def handle_commands(bot):
 def get_cur_state(chat_id):
     """ Returns current user's state from table 'states' by chat_id """
     response = requests.get('http://127.0.0.1:8080/states/%s/' % str(chat_id))
-    return json.loads(response.text)
+    return literal_eval(json.loads(response.text).get('state'))
 
 
-def set_cur_state(chat_id, new_state):
-    """ Sets new user's state in db by chat_id """
-    # TODO insert request to server
-    history[chat_id] = {
-        'state': new_state
-    }
-
-
-def update_cur_form(chat_id, d):
+def update_cur_form(data):
     """ Updates user's form for login/find in db """
-    # TODO insert request to server
-    history[chat_id].update(d)
+    requests.put('http://127.0.0.1:8080/states/', data=json.dumps(data))
 
 
 def handle_start(bot, message):
@@ -65,14 +57,28 @@ def handle_find(bot, message):
         -sex
         -location (choose top 3 people with minimum distances)
     """
-    set_cur_state(message.chat.id, bot_msg.STATE_FIND_INPUT_AGE)
+    state = {
+        'chat_id': message.chat.id,
+        'state': bot_msg.STATE_FIND_INPUT_AGE,
+        'age': None,
+        'location': None,
+        'time': None
+    }
+    update_cur_form(state)
     send_msg(bot, message.chat.id, bot_msg.MSG_FIND_INPUT_START)
     send_msg_input_age(bot, message)
 
 
 def handle_login(bot, message):
     """ Handles command /login. Login is used to become visible for other people. """
-    set_cur_state(message.chat.id, bot_msg.STATE_LOGIN_INPUT_AGE)
+    state = {
+        'chat_id': message.chat.id,
+        'state': bot_msg.STATE_LOGIN_INPUT_AGE,
+        'age': None,
+        'location': None,
+        'time': None
+    }
+    update_cur_form(state)
     send_msg_input_age(bot, message)
 
 
@@ -81,108 +87,95 @@ def handle_message(bot, msg):
     form = get_cur_state(msg.chat.id)
     state = form.get('state')
 
-    if state == bot_msg.STATE_FIND_INPUT_AGE and update_age(bot, msg, bot_msg.STATE_FIND_INPUT_SEX):
+    if state in (bot_msg.STATE_FIND_INPUT_AGE, bot_msg.STATE_LOGIN_INPUT_AGE) and valid_age(bot, msg):
+        form.update(
+            {
+                'age': msg.text,
+                'state': bot_msg.STATE_FIND_INPUT_SEX if state == bot_msg.STATE_FIND_INPUT_AGE else bot_msg.STATE_LOGIN_INPUT_SEX
+            }
+        )
+        update_cur_form(form)
         send_msg_input_sex(bot, msg)
 
-    elif state == bot_msg.STATE_FIND_INPUT_SEX and update_sex(bot, msg, bot_msg.STATE_FIND_INPUT_LOCATION):
+    elif state in (bot_msg.STATE_FIND_INPUT_SEX, bot_msg.STATE_LOGIN_INPUT_SEX) and valid_sex(bot, msg):
+        form.update(
+            {
+                'sex': msg.text,
+                'state': bot_msg.STATE_FIND_INPUT_LOCATION if state == bot_msg.STATE_FIND_INPUT_SEX else bot_msg.STATE_LOGIN_INPUT_LOCATION
+            }
+        )
+        update_cur_form(form)
         send_msg_input_location(bot, msg)
 
-    elif state == bot_msg.STATE_LOGIN_INPUT_AGE and update_age(bot, msg, bot_msg.STATE_LOGIN_INPUT_SEX):
-        send_msg_input_sex(bot, msg)
+    elif state == bot_msg.STATE_LOGIN_INPUT_TIME and valid_time(bot, msg):
+        form.update(
+            {
+                'time': msg.text,
+                'state': bot_msg.STATE_INIT
+            }
+        )
+        update_cur_form(form)
 
-    elif state == bot_msg.STATE_LOGIN_INPUT_SEX and update_sex(bot, msg, bot_msg.STATE_LOGIN_INPUT_LOCATION):
-        send_msg_input_location(bot, msg)
-
-    elif state == bot_msg.STATE_LOGIN_INPUT_TIME and update_time(bot, msg, bot_msg.STATE_INIT):
         send_msg_login_start(bot, msg)
 
         # TODO "LOGIN" request
-        user = history[msg.chat.id]
-        print('REQUEST: Username=%s, Age=%s, Sex=%s, Location=%s, Time=%s' %
-              (
-                  msg.from_user.username,
-                  user.get('age', ''),
-                  user.get('sex', ''),
-                  user.get('location', ''),
-                  user.get('time', '')
-              )
-              )
 
 
 def handle_location(bot, msg):
     """ Additional handler, as addition for finite-state machine, as support of location attachments. """
     form = get_cur_state(msg.chat.id)
+    print('LOCATION STATE:', form)
     state = form.get('state')
 
-    if state == bot_msg.STATE_FIND_INPUT_LOCATION and update_location(bot, msg, bot_msg.STATE_INIT):
-        send_msg_find_start(bot, msg)
+    if state in (bot_msg.STATE_FIND_INPUT_LOCATION, bot_msg.STATE_LOGIN_INPUT_LOCATION) and valid_location(bot, msg):
+        form.update(
+            {
+                'location': str(msg.location),
+                'state': bot_msg.STATE_INIT if state == bot_msg.STATE_FIND_INPUT_LOCATION else bot_msg.STATE_LOGIN_INPUT_TIME
+            }
+        )
+        update_cur_form(form)
 
-        # TODO "Find" request
-        user = history[msg.chat.id]
-        print('REQUEST: Age=%s, Sex=%s, Location=%s' %
-              (
-                  user.get('age', ''),
-                  user.get('sex', ''),
-                  user.get('location', '')
-              )
-              )
+        if state == bot_msg.STATE_FIND_INPUT_LOCATION:
+            send_msg_find_start(bot, msg)
 
-    elif state == bot_msg.STATE_LOGIN_INPUT_LOCATION and update_location(bot, msg, bot_msg.STATE_LOGIN_INPUT_TIME):
-        send_msg_input_time(bot, msg)
+            # TODO "Find" request
+            print("REQUEST:::", form)
+        else:
+            send_msg_input_time(bot, msg)
 
 
-def update_age(bot, message, new_status):
+def valid_age(bot, message):
     try:
         age = int(message.text)
         if 0 < age < 6:
             send_msg(bot, message.chat.id, 'TOO YOUNG')
         elif 6 <= age <= 100:
-            new_data = {
-                'age': age,
-                'state': new_status
-            }
-            update_cur_form(message.chat.id, new_data)
             return True
         elif age > 100:
             send_msg(bot, message.chat.id, 'TOO OLD')
         else:
             send_msg(bot, message.chat.id, 'Wrong input')
-
     except ValueError:
         send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_AGE)
 
 
-def update_sex(bot, message, new_status):
+def valid_sex(bot, message):
     if message.text in ('male', 'female'):
-        new_data = {
-            'sex': message.text,
-            'state': new_status
-        }
-        update_cur_form(message.chat.id, new_data)
         return True
     else:
         send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_SEX)
 
 
-def update_location(bot, message, new_status):
+def valid_location(bot, message):
     if message.location != '':
-        new_data = {
-            'location': message.location,
-            'state': new_status
-        }
-        update_cur_form(message.chat.id, new_data)
         return True
     else:
         send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_LOCATION)
 
 
-def update_time(bot, message, new_status):
+def valid_time(bot, message):
     if message.text in ('15', '30', '60', '90'):
-        new_data = {
-            'time': message.text,
-            'state': new_status
-        }
-        update_cur_form(message.chat.id, new_data)
         return True
     else:
         send_msg(bot, message.chat.id, bot_msg.MSG_ERROR_TIME)
