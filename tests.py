@@ -27,6 +27,7 @@ class TestViews(AioHTTPTestCase):
         data = await res.json()
         assert res.status == 200
         assert 'state' in data
+        print(data)
         for key in ['location', 'state', 'age', 'id', 'chat_id', 'time', 'sex']:
             assert key in data['state']
         state = json.loads(data['state'].replace("'", '"').replace('None', 'null'))
