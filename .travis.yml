@@ -10,4 +10,4 @@ script:
   - python -m unittest tests.py
 
 env:
-  - HOST='127.0.0.1' PORT=8000
+  - HOST='127.0.0.1' PORT=8000 DB_NAME='meet_db' DB_USER='meet_user' DB_PASSWORD='meet_password' DB_HOST='localhost' DB_PORT='5432'
