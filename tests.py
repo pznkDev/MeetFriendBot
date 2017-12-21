@@ -27,11 +27,12 @@ class TestViews(AioHTTPTestCase):
         data = await res.json()
         assert res.status == 200
         assert 'state' in data
-        for key in ['location', 'state', 'age', 'chat_id', 'time', 'sex']:
+        for key in ['location', 'state', 'age', 'chat_id', 'time']:
             assert key in data['state']
         state = json.loads(data['state'].replace("'", '"').replace('None', 'null'))
         assert chat_id == state['chat_id']
-        assert 'male' in state['sex']
+        if 'sex' in state and state['sex']:
+            assert 'male' in state['sex']
 
     @unittest_run_loop
     async def test_update_state(self):
