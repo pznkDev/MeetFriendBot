@@ -56,8 +56,7 @@ class TestViews(AioHTTPTestCase):
             assert chat_id == int(state['chat_id'])
         if 'sex' in state and state['sex']:
             assert 'male' in state['sex']
-
-
+            
     @unittest_run_loop
     async def test_add_user(self):
         route = '/users/'
