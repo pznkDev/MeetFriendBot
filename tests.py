@@ -20,21 +20,6 @@ class TestViews(AioHTTPTestCase):
         return app
 
     @unittest_run_loop
-    async def test_get_state(self):
-        route = '/states/{chat_id}/'
-        chat_id = 1
-        res = await self.client.request('GET', route.format(chat_id=chat_id))
-        data = await res.json()
-        assert res.status == 200
-        assert 'state' in data
-        for key in ['location', 'state', 'age', 'chat_id', 'time']:
-            assert key in data['state']
-        state = json.loads(data['state'].replace("'", '"').replace('None', 'null'))
-        assert chat_id == state['chat_id']
-        if 'sex' in state and state['sex']:
-            assert 'male' in state['sex']
-
-    @unittest_run_loop
     async def test_update_state(self):
         route = '/states/'
         chat_id = 1
@@ -55,6 +40,23 @@ class TestViews(AioHTTPTestCase):
         del state['id']
         del state['sex']
         assert state == data
+
+    @unittest_run_loop
+    async def test_get_state(self):
+        route = '/states/{chat_id}/'
+        chat_id = 1
+        res = await self.client.request('GET', route.format(chat_id=chat_id))
+        data = await res.json()
+        assert res.status == 200
+        assert 'state' in data
+        for key in ['location', 'state', 'age', 'chat_id', 'time']:
+            assert key in data['state']
+        state = json.loads(data['state'].replace("'", '"').replace('None', 'null'))
+        if state['chat_id']:
+            assert chat_id == int(state['chat_id'])
+        if 'sex' in state and state['sex']:
+            assert 'male' in state['sex']
+
 
     @unittest_run_loop
     async def test_add_user(self):
