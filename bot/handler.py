@@ -1,5 +1,7 @@
 from ast import literal_eval
 import json
+from time import sleep
+from random import randint
 
 import requests
 import telebot
@@ -31,15 +33,60 @@ def handle_commands(bot):
         handle_location(bot, message)
 
 
+def make_request_get(url):
+    attempt = 0
+    while True:
+        if attempt == 5:
+            return
+        attempt += 1
+        try:
+            response = requests.get(url)
+            if response.status_code == 500:
+                sleep(attempt * randint(1, 3))
+            else:
+                return response.text
+        except:
+            sleep(attempt * randint(1, 3))
+
+
+def make_request_post(url, data):
+    attempt = 0
+    while True:
+        if attempt == 5:
+            return
+        attempt += 1
+        try:
+            response = requests.post(url, data=data)
+            if response.status_code == 500:
+                sleep(attempt * randint(1, 3))
+        except:
+            sleep(attempt * randint(1, 3))
+
+
+def make_request_put(url, data):
+    attempt = 0
+    while True:
+        if attempt == 5:
+            return
+        attempt += 1
+        try:
+            response = requests.put(url, data=data)
+            if response.status_code == 500:
+                sleep(attempt * randint(1, 3))
+
+        except:
+            sleep(attempt * randint(1, 3))
+
+
 def get_cur_state(chat_id):
     """ Returns current user's state from table 'states' by chat_id """
-    response = requests.get(URL + 'states/%s/' % str(chat_id))
+    response = make_request_get(URL + 'states/%s/' % str(chat_id))
     return literal_eval(json.loads(response.text).get('state'))
 
 
 def update_cur_form(data):
     """ Updates user's form for login/find in db """
-    requests.put(URL + 'states/', data=json.dumps(data))
+    make_request_put(URL + 'states/', data=json.dumps(data))
 
 
 def handle_start(bot, message):
@@ -118,7 +165,7 @@ def handle_message(bot, msg):
         form.pop('state', None)
         form.pop('id', None)
 
-        requests.post(URL + 'users/', data=json.dumps(form))
+        make_request_post(URL + 'users/', data=json.dumps(form))
         send_msg_login_start(bot, msg)
 
 
@@ -139,13 +186,13 @@ def handle_location(bot, msg):
         if state == const.STATE_FIND_INPUT_LOCATION:
             send_msg_find_start(bot, msg)
 
-            response = requests.get(URL + ('users/find?age=%s&sex=%s&location=%s' %
-                                           (
-                                               form.get('age'),
-                                               form.get('sex'),
-                                               str(form.get('location'))
-                                           ))
-                                    )
+            response = make_request_get(URL + ('users/find?age=%s&sex=%s&location=%s' %
+                                               (
+                                                   form.get('age'),
+                                                   form.get('sex'),
+                                                   str(form.get('location'))
+                                               ))
+                                        )
             send_msg_find_result(bot, msg.chat.id, literal_eval(json.loads(response.text).get('users')))
         else:
             send_msg_input_time(bot, msg)
